@@ -31,11 +31,18 @@ def formato_label(fmt):
         return "Fusto da 205L"
     return f"{fmt}L"
 
-def bullet_formato(fmt):
+def bullet_formato(fmt, sku):
+    """Punto elenco 3, con regola speciale per SKU contenente 'tan'"""
     try:
         fmt = int(fmt)
     except:
         return ""
+    
+    sku_lower = str(sku).lower() if sku else ""
+    
+    if "tan" in sku_lower:
+        return f"Tanica da {fmt}L"
+    
     if 1 <= fmt <= 6:
         return f"confezione da {fmt}x1L"
     if fmt == 4:
@@ -75,14 +82,6 @@ def nome_articolo(row):
         parts.append(str(row["Utilizzo"]))
     return " ".join(parts)
 
-def concat_img(row):
-    imgs = []
-    for i in range(1, 8):
-        col = f"Img {i}"
-        if col in row and pd.notna(row[col]):
-            imgs.append(str(row[col]))
-    return ", ".join(imgs)
-
 # =========================
 # UPLOAD FILE
 # =========================
@@ -100,7 +99,7 @@ if file:
     for _, row in df.iterrows():
         cap, qty = capacita_quantita(row.get("Formato (L)", 0))
         
-        output_rows.append({
+        output_row = {
             "Categoria": 20416,
             "Nome della categoria": "",
             "Tipo di articolo": "",
@@ -113,9 +112,8 @@ if file:
             "Descrizione dell'articolo": row.get("Descrizione", ""),
             "Punto elenco 1": "LONG LIFE CONSULTING: azienda italiana specializzata nel settore dei lubrificanti per autovetture, motocicli, industriali, agricoli e nautici.",
             "Punto elenco 2": row.get("Descrizione breve", ""),
-            "Punto elenco 3": bullet_formato(row.get("Formato (L)", 0)),
+            "Punto elenco 3": bullet_formato(row.get("Formato (L)", 0), row.get("Sku", "")),
             "Punto elenco 4": "SPECIFICHE TECNICHE: trovi le specifiche tecniche ben visibili sulle foto mostrate in inserzione.",
-            "URL delle immagini dei dettagli": concat_img(row),
             "Tema della variante": "Capacità × Quantità",
             "Colore": "",
             "Dimensioni": "",
@@ -156,14 +154,21 @@ if file:
             "Identificazione dell'articolo": "",
             "Produttore": produttore(row.get("Marca", "")),
             "Persona responsabile per l'UE": "LONG LIFE CONSULTING S.R.L."
-        })
+        }
+
+        # =========================
+        # Gestione immagini dettagli (colonne separate)
+        for i in range(1, 8):
+            col = f"Img {i}"
+            out_col = f"URL delle immagini dei dettagli {i}"
+            output_row[out_col] = row[col] if col in row and pd.notna(row[col]) else ""
+
+        output_rows.append(output_row)
 
     df_out = pd.DataFrame(output_rows)
 
     # =========================
     # EXPORT EXCEL
-    # =========================
-
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df_out.to_excel(writer, sheet_name="Temu", index=False)
