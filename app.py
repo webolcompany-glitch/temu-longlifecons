@@ -3,7 +3,6 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Generatore Listino Temu", layout="wide")
-
 st.title("🛒 Generatore Listino Temu")
 
 # =========================
@@ -20,17 +19,16 @@ def formato_label(fmt):
         fmt = int(fmt)
     except:
         return ""
-
     if 1 <= fmt <= 6:
         return f"{fmt}x1L"
     if fmt == 4:
-        return "tanica 4L"
+        return "Tanica 4L"
     if fmt == 20:
-        return "tanica 20L"
+        return "Tanica 20L"
     if fmt == 55:
         return "Fustino 55L"
     if fmt == 205:
-        return "fusto 205L"
+        return "Fusto da 205L"
     return f"{fmt}L"
 
 def bullet_formato(fmt):
@@ -38,9 +36,16 @@ def bullet_formato(fmt):
         fmt = int(fmt)
     except:
         return ""
-
     if 1 <= fmt <= 6:
         return f"confezione da {fmt}x1L"
+    if fmt == 20:
+        return "Tanica 20L"
+    if fmt == 55:
+        return "Fustino 55L"
+    if fmt == 205:
+        return "Fusto da 205L"
+    if fmt == 4:
+        return "Tanica 4L"
     return f"{fmt}L"
 
 def capacita_quantita(fmt):
@@ -57,46 +62,15 @@ def produttore(marca):
         return "TAMOIL ITALIA S.P.A."
     return "Long life consulting s.r.l."
 
-def tipo_da_utilizzo(utilizzo):
-    if pd.isna(utilizzo):
-        return ("", "")
-    u = utilizzo.lower()
-
-    motore_keys = [
-        "per auto", "per motori", "per macchine agricole",
-        "due tempi", "2 tempi", "motori a due tempi",
-        "fuoribordo", "raffreddati ad aria"
-    ]
-
-    cambi_keys = [
-        "per cambi, differenziali e trasmissioni",
-        "per trasmissioni e differenziali",
-        "per cambi e differenziali"
-    ]
-
-    for k in motore_keys:
-        if u.startswith(k):
-            return ("Motore", utilizzo.replace(k, "").strip())
-
-    for k in cambi_keys:
-        if u.startswith(k):
-            return ("Per trasmissioni e differenziali", utilizzo.replace(k, "").strip())
-
-    return ("", utilizzo)
-
 def nome_articolo(row):
-    tipo, utilizzo_residuo = tipo_da_utilizzo(row["Utilizzo"])
     parts = [
-        "Olio",
-        tipo,
-        row["Viscosità"],
-        row["Marca"],
-        row["Marca"],
-        row["ACEA"],
-        formato_label(row["Formato (L)"]),
+        row.get("Sottocategoria", ""),
+        row.get("Viscosità", ""),
+        row.get("Marca", ""),
+        row.get("ACEA", ""),
+        formato_label(row.get("Formato (L)", "")),
+        row.get("Utilizzo", "")
     ]
-    if utilizzo_residuo:
-        parts.append(utilizzo_residuo)
     return " ".join([str(p) for p in parts if p])
 
 # =========================
@@ -107,81 +81,83 @@ file = st.file_uploader("📤 Carica il file Excel di input", type=["xlsx"])
 
 if file:
     df = pd.read_excel(file)
-    # --- PULIZIA NOMI COLONNE PER EVITARE KEYERROR ---
+    # Pulizia nomi colonne
     df.columns = df.columns.str.strip()
     st.subheader("Anteprima file input")
     st.dataframe(df.head())
 
-    # =========================
-    # CREAZIONE FILE TEMU
-    # =========================
-
     output_rows = []
 
     for _, row in df.iterrows():
-        cap, qty = capacita_quantita(row["Formato (L)"])
-
+        cap, qty = capacita_quantita(row.get("Formato (L)", 0))
+        
         output_rows.append({
             "Categoria": 20416,
             "Nome della categoria": "",
             "Tipo di articolo": "",
             "Nome dell'Articolo": nome_articolo(row),
-            "outGoodsSn": clean_outgoods(row["Codice prodotto"]),
-            "outSkuSn": row["Sku"],
+            "outGoodsSn": clean_outgoods(row.get("Codice prodotto", "")),
+            "outSkuSn": row.get("Sku", ""),
             "Aggiorna o aggiungi": "Aggiorna/Aggiungi nuovo",
-            "Marca": row["Marca"],
+            "Marca": row.get("Marca", ""),
             "Marchio": "",
-            "Descrizione dell'articolo": row["Descrizione"],
+            "Descrizione dell'articolo": row.get("Descrizione", ""),
             "Punto elenco 1": "LONG LIFE CONSULTING: azienda italiana specializzata nel settore dei lubrificanti per autovetture, motocicli, industriali, agricoli e nautici.",
-            "Punto elenco 2": row["Descrizione breve"],
-            "Punto elenco 3": bullet_formato(row["Formato (L)"]),
+            "Punto elenco 2": row.get("Descrizione breve", ""),
+            "Punto elenco 3": bullet_formato(row.get("Formato (L)", 0)),
             "Punto elenco 4": "SPECIFICHE TECNICHE: trovi le specifiche tecniche ben visibili sulle foto mostrate in inserzione.",
-            "URL Img 1": row.get("Img 1", ""),
-            "URL Img 2": row.get("Img 2", ""),
-            "URL Img 3": row.get("Img 3", ""),
-            "URL Img 4": row.get("Img 4", ""),
-            "URL Img 5": row.get("Img 5", ""),
-            "URL Img 6": row.get("Img 6", ""),
-            "URL Img 7": row.get("Img 7", ""),
+            "URL delle immagini dei dettagli": ", ".join([row.get(f"Img {i}", "") for i in range(1, 8) if row.get(f"Img {i}", "")]),
             "Tema della variante": "Capacità × Quantità",
+            "Colore": "",
+            "Dimensioni": "",
+            "Stile": "",
+            "Materiale": "",
+            "Sapori": "",
+            "Persone applicabili": "",
             "Capacità": cap,
-            "Quantità variante": qty,
-            "URL immagini SKU": row["Img 1"],
-            "Quantità stock": 10,
-            "Prezzo base - EUR": round((row["Prezzo Marketplace"] / 1.22) * 0.85, 2),
-            "Prezzo di listino - EUR": row["Prezzo Marketplace"],
-            "Peso pacco - g": int(row["Formato (L)"] * 1000),
+            "Composizione": "",
+            "Peso": "",
+            "Elementi": "",
+            "Quantità": qty,
+            "Modello": "",
+            "Lunghezza dei capelli": "",
+            "URL immagini SKU": row.get("Img 1", ""),
+            "Quantità": 10,
+            "Prezzo base - EUR": round((row.get("Prezzo Marketplace", 0) / 1.22) * 0.85, 2),
+            "Link di riferimento": "",
+            "Prezzo di listino - EUR": row.get("Prezzo Marketplace", 0),
+            "Non disponibile per il prezzo di listino": "",
+            "Peso pacco - g": int(row.get("Formato (L)", 0) * 1000),
             "Lunghezza - cm": 25,
             "Larghezza - cm": 25,
             "Altezza - cm": 25,
+            "Tipo SKU": "",
+            "In confezione singola": "",
+            "Quantità confezioni totale": "",
+            "Unità di imballaggio": "",
+            "Contenuto netto": "",
+            "Contenuto netto totale": "",
+            "Unità di contenuto netto": "",
             "Modello di spedizione": "Free",
             "Paese/Regione di origine": "Italy",
-            "Produttore": produttore(row["Marca"]),
+            "Provincia di origine": "",
+            "Informazioni sulla confezione SKU (con etichetta visibile)": "",
+            "Etichetta di origine e informazioni sul produttore": "",
+            "Degli articoli con questo ID articolo sono stati immessi sul mercato dell'Unione Europea (o dell'Irlanda del Nord) dopo il 13 dicembre 2024?": "",
+            "Identificazione dell'articolo": "",
+            "Produttore": produttore(row.get("Marca", "")),
             "Persona responsabile per l'UE": "LONG LIFE CONSULTING S.R.L."
         })
 
     df_out = pd.DataFrame(output_rows)
 
     # =========================
-    # EXPORT EXCEL CON DOPPIO HEADER
+    # EXPORT EXCEL
     # =========================
 
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        workbook = writer.book
-        worksheet = workbook.add_worksheet("Temu")
-        writer.sheets["Temu"] = worksheet
-
-        header_row_1 = [
-            "Identità dell'articolo", "", "", "Descrizione dell'articolo", "", "",
-            "Proprietà di vendita", "", "", "", "", "", "",
-            "Variazioni", "", "", "", "", "",
-            "Offerta", "",
-            "Titoli di studio"
-        ]
-
-        worksheet.write_row(0, 0, header_row_1)
-        df_out.to_excel(writer, sheet_name="Temu", startrow=1, index=False)
+        df_out.to_excel(writer, sheet_name="Temu", index=False)
 
     st.success("✅ File Temu generato correttamente")
     st.download_button(
