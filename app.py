@@ -157,7 +157,7 @@ if file:
         }
 
         # =========================
-        # Gestione immagini dettagli (colonne separate)
+        # Gestione immagini dettagli in colonne separate
         for i in range(1, 8):
             col = f"Img {i}"
             out_col = f"URL delle immagini dei dettagli {i}"
@@ -166,6 +166,29 @@ if file:
         output_rows.append(output_row)
 
     df_out = pd.DataFrame(output_rows)
+
+    # =========================
+    # Riordina le colonne secondo il tuo ordine
+    colonne_ordine = [
+        "Categoria","Nome della categoria","Tipo di articolo","Nome dell'Articolo",
+        "outGoodsSn","outSkuSn","Aggiorna o aggiungi","Marca","Marchio","Descrizione dell'articolo",
+        "Punto elenco 1","Punto elenco 2","Punto elenco 3","Punto elenco 4",
+        "URL delle immagini dei dettagli 1","URL delle immagini dei dettagli 2","URL delle immagini dei dettagli 3",
+        "URL delle immagini dei dettagli 4","URL delle immagini dei dettagli 5","URL delle immagini dei dettagli 6",
+        "URL delle immagini dei dettagli 7",
+        "Tema della variante","Colore","Dimensioni","Stile","Materiale","Sapori","Persone applicabili",
+        "Capacità","Composizione","Peso","Elementi","Quantità","Modello","Lunghezza dei capelli",
+        "URL immagini SKU","Quantità","Prezzo base - EUR","Link di riferimento","Prezzo di listino - EUR",
+        "Non disponibile per il prezzo di listino","Peso pacco - g","Lunghezza - cm","Larghezza - cm",
+        "Altezza - cm","Tipo SKU","In confezione singola","Quantità confezioni totale","Unità di imballaggio",
+        "Contenuto netto","Contenuto netto totale","Unità di contenuto netto","Modello di spedizione",
+        "Paese/Regione di origine","Provincia di origine","Informazioni sulla confezione SKU (con etichetta visibile)",
+        "Etichetta di origine e informazioni sul produttore",
+        "Degli articoli con questo ID articolo sono stati immessi sul mercato dell'Unione Europea (o dell'Irlanda del Nord) dopo il 13 dicembre 2024?",
+        "Identificazione dell'articolo","Produttore","Persona responsabile per l'UE"
+    ]
+
+    df_out = df_out[colonne_ordine]
 
     # =========================
     # EXPORT EXCEL
