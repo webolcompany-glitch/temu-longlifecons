@@ -38,14 +38,14 @@ def bullet_formato(fmt):
         return ""
     if 1 <= fmt <= 6:
         return f"confezione da {fmt}x1L"
+    if fmt == 4:
+        return "Tanica 4L"
     if fmt == 20:
         return "Tanica 20L"
     if fmt == 55:
         return "Fustino 55L"
     if fmt == 205:
         return "Fusto da 205L"
-    if fmt == 4:
-        return "Tanica 4L"
     return f"{fmt}L"
 
 def capacita_quantita(fmt):
@@ -63,15 +63,25 @@ def produttore(marca):
     return "Long life consulting s.r.l."
 
 def nome_articolo(row):
-    parts = [
-        row.get("Sottocategoria", ""),
-        row.get("Viscosità", ""),
-        row.get("Marca", ""),
-        row.get("ACEA", ""),
-        formato_label(row.get("Formato (L)", "")),
-        row.get("Utilizzo", "")
-    ]
-    return " ".join([str(p) for p in parts if p])
+    parts = []
+    for col in ["Sottocategoria", "Viscosità", "Marca", "ACEA"]:
+        if col in row and pd.notna(row[col]):
+            parts.append(str(row[col]))
+    # Formato
+    if "Formato (L)" in row and pd.notna(row["Formato (L)"]):
+        parts.append(formato_label(row["Formato (L)"]))
+    # Utilizzo
+    if "Utilizzo" in row and pd.notna(row["Utilizzo"]):
+        parts.append(str(row["Utilizzo"]))
+    return " ".join(parts)
+
+def concat_img(row):
+    imgs = []
+    for i in range(1, 8):
+        col = f"Img {i}"
+        if col in row and pd.notna(row[col]):
+            imgs.append(str(row[col]))
+    return ", ".join(imgs)
 
 # =========================
 # UPLOAD FILE
@@ -81,8 +91,7 @@ file = st.file_uploader("📤 Carica il file Excel di input", type=["xlsx"])
 
 if file:
     df = pd.read_excel(file)
-    # Pulizia nomi colonne
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # pulizia nomi colonne
     st.subheader("Anteprima file input")
     st.dataframe(df.head())
 
@@ -106,7 +115,7 @@ if file:
             "Punto elenco 2": row.get("Descrizione breve", ""),
             "Punto elenco 3": bullet_formato(row.get("Formato (L)", 0)),
             "Punto elenco 4": "SPECIFICHE TECNICHE: trovi le specifiche tecniche ben visibili sulle foto mostrate in inserzione.",
-            "URL delle immagini dei dettagli": ", ".join([row.get(f"Img {i}", "") for i in range(1, 8) if row.get(f"Img {i}", "")]),
+            "URL delle immagini dei dettagli": concat_img(row),
             "Tema della variante": "Capacità × Quantità",
             "Colore": "",
             "Dimensioni": "",
@@ -127,7 +136,7 @@ if file:
             "Link di riferimento": "",
             "Prezzo di listino - EUR": row.get("Prezzo Marketplace", 0),
             "Non disponibile per il prezzo di listino": "",
-            "Peso pacco - g": int(row.get("Formato (L)", 0) * 1000),
+            "Peso pacco - g": int(row.get("Formato (L)", 0) * 1000) if pd.notna(row.get("Formato (L)", 0)) else "",
             "Lunghezza - cm": 25,
             "Larghezza - cm": 25,
             "Altezza - cm": 25,
