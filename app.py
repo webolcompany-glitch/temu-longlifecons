@@ -107,6 +107,8 @@ file = st.file_uploader("📤 Carica il file Excel di input", type=["xlsx"])
 
 if file:
     df = pd.read_excel(file)
+    # --- PULIZIA NOMI COLONNE PER EVITARE KEYERROR ---
+    df.columns = df.columns.str.strip()
     st.subheader("Anteprima file input")
     st.dataframe(df.head())
 
@@ -134,13 +136,13 @@ if file:
             "Punto elenco 2": row["Descrizione breve"],
             "Punto elenco 3": bullet_formato(row["Formato (L)"]),
             "Punto elenco 4": "SPECIFICHE TECNICHE: trovi le specifiche tecniche ben visibili sulle foto mostrate in inserzione.",
-            "URL Img 1": row["Img 1"],
-            "URL Img 2": row["Img 2"],
-            "URL Img 3": row["Img 3"],
-            "URL Img 4": row["Img 4"],
-            "URL Img 5": row["Img 5"],
-            "URL Img 6": row["Img 6"],
-            "URL Img 7": row["Img 7"],
+            "URL Img 1": row.get("Img 1", ""),
+            "URL Img 2": row.get("Img 2", ""),
+            "URL Img 3": row.get("Img 3", ""),
+            "URL Img 4": row.get("Img 4", ""),
+            "URL Img 5": row.get("Img 5", ""),
+            "URL Img 6": row.get("Img 6", ""),
+            "URL Img 7": row.get("Img 7", ""),
             "Tema della variante": "Capacità × Quantità",
             "Capacità": cap,
             "Quantità variante": qty,
